@@ -74,7 +74,7 @@ tLoopThread::tLoopThread(rrlib::time::tDuration default_cycle_time, bool use_app
   warn_on_cycle_time_exceed(warn_on_cycle_time_exceed),
   last_cycle_time(),
   last_cycle_start(rrlib::time::cNO_TIME),
-  last_wait()
+  last_wait(rrlib::time::tDuration::zero())
 {
 }
 
@@ -117,7 +117,7 @@ void tLoopThread::MainLoop()
         if (last_wait > rrlib::time::tDuration::zero())
         {
           RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle, instead.");
-          Sleep(last_wait, use_application_time, last_cycle_start + cycle_time);
+          Sleep(last_wait, use_application_time);
         }
         else
         {
