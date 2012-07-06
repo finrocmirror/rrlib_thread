@@ -127,7 +127,7 @@ void tLockStack::DumpStack()
     const tLock* l = *it;
     if (l->locked_ordered)
     {
-      RRLIB_LOG_PRINTF(eLL_USER, "  LockOrderMutex %p ('%s', primary %d, secondary %d)", l->locked_ordered, l->locked_ordered->GetDescription(), l->locked_ordered->GetPrimary(), l->locked_ordered->GetSecondary());
+      RRLIB_LOG_PRINTF(eLL_USER, "  %s %p ('%s', primary %d, secondary %d)", l->locked_simple ? "OrderedMutex" : "RecursiveMutex", l->locked_ordered, l->locked_ordered->GetDescription(), l->locked_ordered->GetPrimary(), l->locked_ordered->GetSecondary());
     }
     else
     {
@@ -177,6 +177,19 @@ void tLockStack::Push(const tLock* lock)
         RRLIB_LOG_PRINTF(eLL_ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). Lock may not be acquired in this order.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
         DumpStack();
         abort();
+      }
+    }
+    else if (lock->locked_ordered && lock->locked_simple)
+    {
+      bool found = false;
+      for (auto it = s->entries.begin(); it < s->entries.end(); it++)
+      {
+        if (lock->locked_ordered == (*it)->locked_ordered)
+        {
+          RRLIB_LOG_PRINTF(eLL_ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). Only recursive mutexes may be locked twice.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
+          DumpStack();
+          abort();
+        }
       }
     }
   }

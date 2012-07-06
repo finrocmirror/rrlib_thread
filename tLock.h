@@ -88,7 +88,7 @@ public:
 #ifndef RRLIB_SINGLE_THREADED
 
   explicit tLock(const tMutex& mutex) :
-    simple_lock(mutex.wrapped),
+    simple_lock(),
     recursive_lock(),
     locked_ordered(NULL),
     locked_simple(&mutex)
@@ -96,6 +96,7 @@ public:
 #ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
     internal::tLockStack::Push(this);
 #endif
+    simple_lock = std::unique_lock<std::mutex>(mutex.wrapped);
   }
 
   explicit tLock(const tNoMutex& mutex) :
@@ -107,7 +108,7 @@ public:
   }
 
   explicit tLock(const tOrderedMutex& mutex) :
-    simple_lock(mutex.wrapped),
+    simple_lock(),
     recursive_lock(),
     locked_ordered(&mutex),
     locked_simple(&mutex)
@@ -115,17 +116,19 @@ public:
 #ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
     internal::tLockStack::Push(this);
 #endif
+    simple_lock = std::unique_lock<std::mutex>(mutex.wrapped);
   }
 
   explicit tLock(const tRecursiveMutex& mutex) :
     simple_lock(),
-    recursive_lock(mutex.wrapped),
+    recursive_lock(),
     locked_ordered(&mutex),
     locked_simple()
   {
 #ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
     internal::tLockStack::Push(this);
 #endif
+    recursive_lock = std::unique_lock<std::recursive_mutex>(mutex.wrapped);
   }
 
   ~tLock()
