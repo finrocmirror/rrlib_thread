@@ -34,7 +34,7 @@
 //----------------------------------------------------------------------
 #include <sstream>
 #include <cstring>
-#include "rrlib/util/patterns/singleton.h"
+#include "rrlib/design_patterns/singleton.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -248,7 +248,7 @@ void tThread::AddToThreadList()
   RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_1, "Creating thread ", this);
 }
 
-typedef rrlib::util::tSingletonHolder<boost::thread_specific_ptr<tThread>, rrlib::util::singleton::Longevity, internal::CreateCurThreadLocal> tCurThreadLocal;
+typedef rrlib::design_patterns::tSingletonHolder<boost::thread_specific_ptr<tThread>, rrlib::design_patterns::singleton::Longevity, internal::CreateCurThreadLocal> tCurThreadLocal;
 static inline unsigned int GetLongevity(boost::thread_specific_ptr<tThread>*)
 {
   return 0xFCCCCCCC; // should exit before allocation register

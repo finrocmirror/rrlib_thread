@@ -32,7 +32,7 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include "rrlib/util/patterns/singleton.h"
+#include "rrlib/design_patterns/singleton.h"
 #include "rrlib/time/tTimeStretchingListener.h"
 #include "rrlib/logging/messages.h"
 
@@ -69,7 +69,7 @@ namespace thread
 // Implementation
 //----------------------------------------------------------------------
 
-typedef rrlib::util::tSingletonHolder<std::vector<tConditionVariable*>> tConditionVariableListSingleton;
+typedef rrlib::design_patterns::tSingletonHolder<std::vector<tConditionVariable*>> tConditionVariableListSingleton;
 static std::vector<tConditionVariable*>* GetConditionVariableList()
 {
   try
