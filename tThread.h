@@ -239,7 +239,7 @@ public:
    */
   virtual void Run()
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "No Run method implemented.");
+    RRLIB_LOG_PRINT(WARNING, "No Run method implemented.");
   }
 
   /*!

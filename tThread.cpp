@@ -198,7 +198,7 @@ tThread::tThread(const std::string& name) :
 
 tThread::~tThread()
 {
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_1, "Deleting thread ", this);
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Deleting thread ", this);
 
   // remove from thread list
   tLock lock(thread_list_ref->obj_mutex);
@@ -245,7 +245,7 @@ void tThread::AddToThreadList()
   thread_list_ref->vec.push_back(self);
 
   //printf("Creating thread %p %s\n", this, getName().getCString());
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_1, "Creating thread ", this);
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Creating thread ", this);
 }
 
 typedef rrlib::design_patterns::tSingletonHolder<boost::thread_specific_ptr<tThread>, rrlib::design_patterns::singleton::Longevity, internal::CreateCurThreadLocal> tCurThreadLocal;
@@ -270,7 +270,7 @@ void tThread::Join()
 {
   if (unknown_thread)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Operation not supported for threads of unknown origin.");
+    RRLIB_LOG_PRINT(WARNING, "Operation not supported for threads of unknown origin.");
     return;
   }
   if (!wrapped_thread.joinable())
@@ -279,23 +279,23 @@ void tThread::Join()
   }
   if (&CurrentThread() == this)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Thread cannot join itself");
+    RRLIB_LOG_PRINT(DEBUG_WARNING, "Thread cannot join itself");
     return;
   }
   PreJoin();
-  RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_VERBOSE_1, "Joining Thread");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Joining Thread");
 
   int joining = joining_threads.fetch_add(1);
   if (joining >= 1)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Multiple threads are trying to join. Returning this thread without joining.");
+    RRLIB_LOG_PRINT(DEBUG_WARNING, "Multiple threads are trying to join. Returning this thread without joining.");
     return;
   }
   if (wrapped_thread.joinable())
   {
     wrapped_thread.join();
   }
-  RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_VERBOSE_1, "Joined Thread");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Joined Thread");
 }
 
 void tThread::Launch(tThread* thread_ptr)
@@ -305,14 +305,14 @@ void tThread::Launch(tThread* thread_ptr)
 
 void tThread::Launcher()
 {
-  //unsafe _FINROC_LOG_MESSAGE(eLL_DEBUG_VERBOSE_2, logDomain) << "Entering";
+  //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "Entering";
   cur_thread = this;
   tLock l(*this);
   state = tState::PREPARE_RUNNING;
-  //unsafe _FINROC_LOG_MESSAGE(eLL_DEBUG_VERBOSE_2, logDomain) << "Locked";
+  //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "Locked";
   //curThread = threadPtr;
   GetCurThreadLocal().reset(this);
-  //unsafe _FINROC_LOG_MESSAGE(eLL_DEBUG_VERBOSE_2, logDomain) << "ThreadLocal set";
+  //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "ThreadLocal set";
 
   // wait for start signal
   while ((!(start_signal)) && (!(stop_signal)))
@@ -327,17 +327,17 @@ void tThread::Launcher()
     try
     {
       l.Unlock();
-      RRLIB_LOG_PRINT(eLL_DEBUG, "Thread started");
+      RRLIB_LOG_PRINT(DEBUG, "Thread started");
       Run();
-      RRLIB_LOG_PRINT(eLL_DEBUG, "Thread exited normally");
+      RRLIB_LOG_PRINT(DEBUG, "Thread exited normally");
     }
     catch (const std::exception& e)
     {
-      RRLIB_LOG_PRINT(eLL_ERROR, "Thread exited because of exception: ", e.what());
+      RRLIB_LOG_PRINT(ERROR, "Thread exited because of exception: ", e.what());
     }
   }
 
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Exiting");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Exiting");
 
   l.Unlock();
   // Do this BEFORE thread is removed from list - to ensure this is done StopThreads
@@ -350,7 +350,7 @@ void tThread::Launcher()
   }
   catch (const std::exception& e)
   {
-    RRLIB_LOG_PRINT(eLL_ERROR, "Thread encountered exception during cleanup: ", e.what());
+    RRLIB_LOG_PRINT(ERROR, "Thread encountered exception during cleanup: ", e.what());
   }
 }
 
@@ -362,17 +362,17 @@ void tThread::LockObject(std::shared_ptr<void> obj)
 
 void tThread::PreJoin()
 {
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Entering");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Entering");
   tLock l(*this);
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Locked");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Locked");
   if (state == tState::PREPARE_RUNNING || state == tState::NEW)
   {
-    RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Notifying");
+    RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Notifying");
     stop_signal = true;
     monitor.Notify(l);
-    RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Notified");
+    RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Notified");
   }
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Leaving");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Leaving");
 }
 
 void tThread::SetName(const std::string& name)
@@ -388,7 +388,7 @@ void tThread::SetRealtime()
   if (pthread_setschedparam(handle, SCHED_FIFO, &param))
   {
     //printf("Failed making thread a real-time thread. Possibly current user has insufficient rights.\n");
-    RRLIB_LOG_PRINT(eLL_ERROR, "Failed making thread a real-time thread. Possibly current user has insufficient rights.");
+    RRLIB_LOG_PRINT(ERROR, "Failed making thread a real-time thread. Possibly current user has insufficient rights.");
   }
 }
 
@@ -433,20 +433,20 @@ void tThread::Sleep(const rrlib::time::tDuration& sleep_for, bool use_applicatio
 
 void tThread::Start()
 {
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Entering");
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "PreMutex");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Entering");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "PreMutex");
   tLock l(*this);
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Locked");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Locked");
   start_signal = true;
   monitor.Notify(l);
-  RRLIB_LOG_PRINT(eLL_DEBUG_VERBOSE_2, "Notified thread");
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Notified thread");
 }
 
 void tThread::StopThread()
 {
   if (unknown_thread)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Operation not supported for threads of unknown origin.");
+    RRLIB_LOG_PRINT(WARNING, "Operation not supported for threads of unknown origin.");
     return;
   }
 
@@ -465,7 +465,7 @@ bool tThread::StopThreads(bool query_only)
   }
   stopping_threadz = true;
   const char*(*GetLogDescription)() = GetLogDescriptionStatic;
-  RRLIB_LOG_PRINT(eLL_USER, "Stopping all threads");
+  RRLIB_LOG_PRINT(USER, "Stopping all threads");
 
   tLock lock(internal::GetThreadList()->obj_mutex);
   std::vector<std::weak_ptr<tThread>> current_threads_unordered;
@@ -513,11 +513,11 @@ bool tThread::StopThreads(bool query_only)
     {
       if (t->unknown_thread)
       {
-        RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Do not know how to stop thread '", t->GetLogDescription(), "' of unknown origin.");
+        RRLIB_LOG_PRINT(WARNING, "Do not know how to stop thread '", t->GetLogDescription(), "' of unknown origin.");
         continue;
       }
 
-      RRLIB_LOG_PRINT(eLL_DEBUG, "Stopping thread '", t->GetLogDescription(), "'");
+      RRLIB_LOG_PRINT(DEBUG, "Stopping thread '", t->GetLogDescription(), "'");
       tLock l(*t);
       t->stop_signal = true;
       if (!t->start_signal)

@@ -110,10 +110,10 @@ class tTimeStretchingListenerImpl : public rrlib::time::tTimeStretchingListener
           if (wait_for > (*it)->waiting_for_application_duration)
           {
             // clock inconsistency
-            RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Detected clock inconsistency. New timestamp is more than ",
+            RRLIB_LOG_PRINT(DEBUG_WARNING, "Detected clock inconsistency. New timestamp is more than ",
                             rrlib::time::ToIsoString(wait_for - (*it)->waiting_for_application_duration), " in the past.");
             (*it)->waiting_for_application_duration = (*it)->waiting_for_application_duration / 2;
-            RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Recovering by waiting another ", rrlib::time::ToString((*it)->waiting_for_application_duration), " (half the original timeout).");
+            RRLIB_LOG_PRINT(DEBUG_WARNING, "Recovering by waiting another ", rrlib::time::ToString((*it)->waiting_for_application_duration), " (half the original timeout).");
 
             (*it)->waiting_until_application_time = current_time - (*it)->waiting_for_application_duration;
           }
@@ -280,7 +280,7 @@ void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, 
       }
       catch (const std::logic_error&) // tTimeMutex no longer exists
       {
-        RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Won't wait after rrlibs have been (partly) destructed.");
+        RRLIB_LOG_PRINT(DEBUG_WARNING, "Won't wait after rrlibs have been (partly) destructed.");
         return;
       }
     }
@@ -332,10 +332,10 @@ void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, 
       if (waiting_for_application_duration_new > waiting_for_application_duration)
       {
         // clock inconsistency
-        RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Detected clock inconsistency. New timestamp is more than ",
+        RRLIB_LOG_PRINT(DEBUG_WARNING, "Detected clock inconsistency. New timestamp is more than ",
                         rrlib::time::ToIsoString(waiting_for_application_duration_new - waiting_for_application_duration), " in the past.");
         waiting_for_application_duration = waiting_for_application_duration / 2;
-        RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Recovering by waiting another ", rrlib::time::ToString(waiting_for_application_duration), " (half the original timeout).");
+        RRLIB_LOG_PRINT(DEBUG_WARNING, "Recovering by waiting another ", rrlib::time::ToString(waiting_for_application_duration), " (half the original timeout).");
 
         waiting_until_application_time = current_app_time - waiting_for_application_duration;
       }

@@ -111,19 +111,19 @@ void tLoopThread::MainLoop()
       if (wait_for_x < rrlib::time::tDuration::zero() && warn_on_cycle_time_exceed && cDISPLAYWARNINGS)
       {
         //System.err.println("warning: Couldn't keep up cycle time (" + (-waitForX) + " ms too long)");
-        RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Couldn't keep up cycle time (", rrlib::time::ToString(-wait_for_x), " too long)");
+        RRLIB_LOG_PRINT(WARNING, "Couldn't keep up cycle time (", rrlib::time::ToString(-wait_for_x), " too long)");
       }
       else if (wait_for_x > cycle_time)
       {
-        RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Clock inconsistency detected: Last cycle started \"after\" this cycle. This would mean we'd have to wait for ", rrlib::time::ToString(wait_for_x), " now.");
+        RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: Last cycle started \"after\" this cycle. This would mean we'd have to wait for ", rrlib::time::ToString(wait_for_x), " now.");
         if (last_wait > rrlib::time::tDuration::zero())
         {
-          RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle, instead.");
+          RRLIB_LOG_PRINT(WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle, instead.");
           Sleep(last_wait, local_use_application_time);
         }
         else
         {
-          RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Not waiting at all. As it appears, this thread has never waited yet.");
+          RRLIB_LOG_PRINT(WARNING, "Not waiting at all. As it appears, this thread has never waited yet.");
         }
       }
       else if (wait_for_x > rrlib::time::tDuration::zero())
@@ -157,7 +157,7 @@ void tLoopThread::Run()
   }
   catch (const std::exception& e)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Uncaught Exception: ", e);
+    RRLIB_LOG_PRINT(DEBUG_WARNING, "Uncaught Exception: ", e);
   }
 }
 

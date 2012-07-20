@@ -118,20 +118,20 @@ void tLockStack::DumpStack()
   tLockStackData* s = stack_data;
   if (!s)
   {
-    RRLIB_LOG_PRINT(eLL_USER, "Current thread has no lock stack (yet).");
+    RRLIB_LOG_PRINT(USER, "Current thread has no lock stack (yet).");
     return;
   }
-  RRLIB_LOG_PRINT(eLL_USER, "Lock Stack Dump:");
+  RRLIB_LOG_PRINT(USER, "Lock Stack Dump:");
   for (auto it = s->entries.rbegin(); it < s->entries.rend(); it++)
   {
     const tLock* l = *it;
     if (l->locked_ordered)
     {
-      RRLIB_LOG_PRINTF(eLL_USER, "  %s %p ('%s', primary %d, secondary %d)", l->locked_simple ? "OrderedMutex" : "RecursiveMutex", l->locked_ordered, l->locked_ordered->GetDescription(), l->locked_ordered->GetPrimary(), l->locked_ordered->GetSecondary());
+      RRLIB_LOG_PRINTF(USER, "  %s %p ('%s', primary %d, secondary %d)", l->locked_simple ? "OrderedMutex" : "RecursiveMutex", l->locked_ordered, l->locked_ordered->GetDescription(), l->locked_ordered->GetPrimary(), l->locked_ordered->GetSecondary());
     }
     else
     {
-      RRLIB_LOG_PRINTF(eLL_USER, "  Simple Mutex %p", l->locked_simple);
+      RRLIB_LOG_PRINTF(USER, "  Simple Mutex %p", l->locked_simple);
     }
   }
 }
@@ -155,11 +155,11 @@ void tLockStack::Push(const tLock* lock)
     {
       if (lock->locked_ordered)
       {
-        RRLIB_LOG_PRINTF(eLL_ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). You are not allowed to lock another mutex after a simple one.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
+        RRLIB_LOG_PRINTF(ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). You are not allowed to lock another mutex after a simple one.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
       }
       else
       {
-        RRLIB_LOG_PRINTF(eLL_ERROR, "Attempt failed to lock simple mutex %p. You are not allowed to lock another mutex after a simple one.", lock->locked_simple);
+        RRLIB_LOG_PRINTF(ERROR, "Attempt failed to lock simple mutex %p. You are not allowed to lock another mutex after a simple one.", lock->locked_simple);
       }
       DumpStack();
       abort();
@@ -173,7 +173,7 @@ void tLockStack::Push(const tLock* lock)
       }
       if (!found)
       {
-        RRLIB_LOG_PRINTF(eLL_ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). Lock may not be acquired in this order.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
+        RRLIB_LOG_PRINTF(ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). Lock may not be acquired in this order.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
         DumpStack();
         abort();
       }
@@ -185,7 +185,7 @@ void tLockStack::Push(const tLock* lock)
       {
         if (lock->locked_ordered == (*it)->locked_ordered)
         {
-          RRLIB_LOG_PRINTF(eLL_ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). Only recursive mutexes may be locked twice.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
+          RRLIB_LOG_PRINTF(ERROR, "Attempt failed to lock ordered mutex %p ('%s', primary %d, secondary %d). Only recursive mutexes may be locked twice.", lock->locked_ordered, lock->locked_ordered->GetDescription(), lock->locked_ordered->GetPrimary(), lock->locked_ordered->GetSecondary());
           DumpStack();
           abort();
         }
