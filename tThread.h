@@ -106,33 +106,23 @@ public:
   virtual ~tThread();
 
   /*!
-   * Note: To merely get current thread's id, Util.currentThreadId() is much faster.
-   *
-   * \return Shared Pointer to the thread that is currently executing.
-   */
-  static std::shared_ptr<tThread> CurrentThread()
-  {
-    return CurrentThreadRaw()->self;
-  }
-
-  /*!
    * (convenience function)
    *
    * \return Current thread id
    */
   inline static int64_t CurrentThreadId()
   {
-    return CurrentThreadRaw()->GetId();
+    return CurrentThread().GetId();
   }
 
   /*!
-   * (This is faster than CurrentThread()... However, it's only safe as long
-   *  as the returned thread pointer is only used by the thread itself.
-   *  Otherwise the thread might have already been deleted.)
+   * \return The thread that is currently executing.
    *
-   * \return Raw Pointer to the thread that is currently executing.
+   * (Using the returned reference is only safe as long it is only used by the thread itself.
+   *  Otherwise the thread might have already been deleted.
+   *  Using CurrentThread().GetSharedPtr() is the safe alternative in this respect.)
    */
-  inline static tThread* CurrentThreadRaw()
+  inline static tThread& CurrentThread()
   {
     tThread* result = cur_thread;
     if (result == NULL)   // unknown thread
@@ -145,7 +135,7 @@ public:
       }
       cur_thread = result;
     }
-    return result;
+    return *result;
   }
 
   bool GetDeleteOnCompletion() const
@@ -220,6 +210,14 @@ public:
   inline bool IsAlive() const
   {
     return state == tState::RUNNING || state == tState::PREPARE_RUNNING;
+  }
+
+  /*!
+   * \return Is the stop signal in order to stop this thread set?
+   */
+  inline bool IsStopSignalSet() const
+  {
+    return stop_signal;
   }
 
   /*!
@@ -336,15 +334,20 @@ public:
 //----------------------------------------------------------------------
 protected:
 
-  //! Signal for stopping thread
-  std::atomic<bool> stop_signal;
-
   /*!
    * Default constructor for derived classes.
    *
    * \param name Name of thread (optional)
    */
   tThread(const std::string& name = "");
+
+  /*!
+   * \param value New value for signal for stopping thread
+   */
+  void SetStopSignal(bool value)
+  {
+    stop_signal = value;
+  }
 
 //----------------------------------------------------------------------
 // Private fields and methods
@@ -367,6 +370,9 @@ private:
 
   /*! ID that indicates that there's no valid thread id in thread local - needs to be different for windows */
   static const int cNO_THREAD_ID = -1;
+
+  /*! Signal for stopping thread */
+  std::atomic<bool> stop_signal;
 
   /*! Holds on to lock stack as long as thread exists */
   std::shared_ptr<void> lock_stack;

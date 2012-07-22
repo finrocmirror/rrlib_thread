@@ -89,16 +89,16 @@ public:
   /*!
    * \return Start time of current cycle (always smaller than rrlib::time::Now())
    */
-  inline rrlib::time::tTimestamp GetCurrentCycleStartTime()
+  inline rrlib::time::tTimestamp GetCurrentCycleStartTime() const
   {
-    assert(CurrentThreadRaw() == this && "Please only call from this thread");
+    assert(&CurrentThread() == this && "Please only call from this thread");
     return last_cycle_start;
   }
 
   /*!
    * \return Current Cycle time with which callback function is called
    */
-  inline rrlib::time::tDuration GetCycleTime()
+  inline rrlib::time::tDuration GetCycleTime() const
   {
     return cycle_time.Load();
   }
@@ -106,7 +106,7 @@ public:
   /*!
    * \return Time spent in last call to MainLoopCallback()
    */
-  inline rrlib::time::tDuration GetLastCycleTime()
+  inline rrlib::time::tDuration GetLastCycleTime() const
   {
     return last_cycle_time.Load();
   }
@@ -114,7 +114,7 @@ public:
   /*!
    * \return Is Thread currently paused?
    */
-  inline bool IsPausing()
+  inline bool IsPausing() const
   {
     return pause_signal;
   }
@@ -122,17 +122,17 @@ public:
   /*!
    * \return Is thread currently running? (and not paused)
    */
-  inline bool IsRunning()
+  inline bool IsRunning() const
   {
     return IsAlive() && !IsPausing();
   }
 
   /*!
-   * \return Is the stop signal set in order to stop the thread?
+   * \return Is this thread using "application time" instead of system time (see rrlib/util/time.h)?
    */
-  inline bool IsStopSignalSet()
+  inline bool IsUsingApplicationTime() const
   {
-    return stop_signal;
+    return use_application_time;
   }
 
   /*!
@@ -158,11 +158,22 @@ public:
     this->cycle_time.Store(cycle_time);
   }
 
+  /*!
+   * \param use_application_time Use "application time" (see rrlib/util/time.h) instead of system time?
+   *
+   * This will not have any effect on Sleep() and Wait() operations this thread might be executing.
+   *
+   * (This method is preferably called from this thread - to avoid issues in case
+   *  thread is currently performing operations with another time base)
+   */
+  void SetUseApplicationTime(bool use_application_time);
 
 //----------------------------------------------------------------------
 // Private fields and methods
 //----------------------------------------------------------------------
 private:
+
+  // TODO: For optimization, we could put the following three atomic variables in a single 64-bit atomic
 
   /*! Thread pauses if this flag is set */
   std::atomic<bool> pause_signal;
@@ -171,7 +182,7 @@ private:
   rrlib::time::tAtomicDuration cycle_time;
 
   /*! Use "application time" (see rrlib/util/time.h) instead of system time? */
-  const bool use_application_time;
+  std::atomic<bool> use_application_time;
 
   /*! Display warning, if cycle time is exceeded? */
   const bool warn_on_cycle_time_exceed;

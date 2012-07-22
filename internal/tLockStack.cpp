@@ -101,7 +101,7 @@ static __thread tLockStackData* stack_data = NULL;
 
 static std::string GetLogDescription()
 {
-  return std::string("Lock stack for thread '") + tThread::CurrentThreadRaw()->GetName() + "'";
+  return std::string("Lock stack for thread '") + tThread::CurrentThread().GetName() + "'";
 }
 
 /*!
@@ -142,10 +142,9 @@ void tLockStack::Push(const tLock* lock)
   if (!stack_data)
   {
     stack_data = new tLockStackData();
-    tThread* t = tThread::CurrentThreadRaw();
-    assert(t);
+    tThread& t = tThread::CurrentThread();
     // tLock l(*t); no thread-safety issue, since this is always the current thread itself
-    t->lock_stack = std::shared_ptr<tLockStackData>(stack_data); // make sure it will be deleted with thread
+    t.lock_stack = std::shared_ptr<tLockStackData>(stack_data); // make sure it will be deleted with thread
   }
 
   tLockStackData* s = stack_data;

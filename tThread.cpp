@@ -223,7 +223,7 @@ tThread::~tThread()
   lock.Unlock();
   if (!unknown_thread)
   {
-    if (tThread::CurrentThreadRaw() != this)
+    if (&tThread::CurrentThread() != this)
     {
       Join(); // we shouldn't delete anything while thread is still running
     }
@@ -277,7 +277,7 @@ void tThread::Join()
   {
     return;
   }
-  if (CurrentThreadRaw() == this)
+  if (&CurrentThread() == this)
   {
     RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Thread cannot join itself");
     return;
@@ -396,7 +396,7 @@ void tThread::SetRealtime()
 void tThread::Sleep(const rrlib::time::tDuration& sleep_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
 {
   rrlib::time::tTimeMode time_mode = rrlib::time::GetTimeMode();
-  tThread& t = *CurrentThreadRaw();
+  tThread& t = CurrentThread();
   if (time_mode == rrlib::time::tTimeMode::SYSTEM_TIME || (!use_application_time))
   {
     if (sleep_for <= std::chrono::milliseconds(500))
@@ -509,7 +509,7 @@ bool tThread::StopThreads(bool query_only)
   {
     std::weak_ptr<tThread> thread = current_threads[i];
     std::shared_ptr<tThread> t = thread.lock();
-    if (t && t.get() != CurrentThreadRaw())
+    if (t && t.get() != &CurrentThread())
     {
       if (t->unknown_thread)
       {

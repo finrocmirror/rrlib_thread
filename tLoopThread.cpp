@@ -87,7 +87,7 @@ void tLoopThread::ContinueThread()
 
 void tLoopThread::MainLoop()
 {
-  while (!stop_signal)
+  while (!IsStopSignalSet())
   {
     if (pause_signal.load(std::memory_order_relaxed))
     {
@@ -99,7 +99,9 @@ void tLoopThread::MainLoop()
 
     if (last_cycle_start != rrlib::time::cNO_TIME)
     {
+      // copy atomics to local variables
       rrlib::time::tDuration cycle_time = this->cycle_time.Load();
+      bool local_use_application_time = use_application_time.load(std::memory_order_relaxed);
 
       // wait
       rrlib::time::tTimestamp now = rrlib::time::Now();
@@ -117,7 +119,7 @@ void tLoopThread::MainLoop()
         if (last_wait > rrlib::time::tDuration::zero())
         {
           RRLIB_LOG_PRINT(rrlib::logging::eLL_WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle, instead.");
-          Sleep(last_wait, use_application_time);
+          Sleep(last_wait, local_use_application_time);
         }
         else
         {
@@ -127,7 +129,7 @@ void tLoopThread::MainLoop()
       else if (wait_for_x > rrlib::time::tDuration::zero())
       {
         last_wait = wait_for_x;
-        Sleep(wait_for_x, use_application_time, last_cycle_start + cycle_time);
+        Sleep(wait_for_x, local_use_application_time, last_cycle_start + cycle_time);
       }
       last_cycle_start += cycle_time;
       if (wait_for_x < rrlib::time::tDuration::zero())
@@ -155,9 +157,20 @@ void tLoopThread::Run()
   }
   catch (const std::exception& e)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG, "Uncaught Thread Exception - ", e);
+    RRLIB_LOG_PRINT(rrlib::logging::eLL_DEBUG_WARNING, "Uncaught Exception: ", e);
   }
 }
+
+void tLoopThread::SetUseApplicationTime(bool use_application_time)
+{
+  //assert(&CurrentThread() == this && "Please only call from this thread");
+  bool last_value = this->use_application_time.exchange(use_application_time);
+  if (last_value != use_application_time)
+  {
+    last_cycle_start != rrlib::time::cNO_TIME;
+  }
+}
+
 
 //----------------------------------------------------------------------
 // End of namespace declaration
