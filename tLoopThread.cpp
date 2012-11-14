@@ -157,7 +157,7 @@ void tLoopThread::Run()
   }
   catch (const std::exception& e)
   {
-    RRLIB_LOG_PRINT(DEBUG_WARNING, "Uncaught Exception: ", e);
+    RRLIB_LOG_PRINT(ERROR, "Uncaught Exception: ", e);
   }
 }
 
