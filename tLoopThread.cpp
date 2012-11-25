@@ -148,17 +148,8 @@ void tLoopThread::MainLoop()
 
 void tLoopThread::Run()
 {
-  try
-  {
-    //stopSignal = false; // this may lead to unintended behaviour
-
-    // Start main loop
-    MainLoop();
-  }
-  catch (const std::exception& e)
-  {
-    RRLIB_LOG_PRINT(ERROR, "Uncaught Exception: ", e);
-  }
+  // Start main loop
+  MainLoop();
 }
 
 void tLoopThread::SetUseApplicationTime(bool use_application_time)

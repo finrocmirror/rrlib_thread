@@ -34,8 +34,9 @@
 //----------------------------------------------------------------------
 #include <sstream>
 #include <cstring>
+#include <sys/resource.h>
+#include <sys/syscall.h>
 #include "rrlib/design_patterns/singleton.h"
-
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
@@ -124,13 +125,6 @@ struct CreateCurThreadLocal
   }
 };
 
-/*! Thread counter - used for generating names */
-static std::atomic<int>& GetThreadCounter()
-{
-  static std::atomic<int> thread_counter;
-  return thread_counter;
-}
-
 /*! List of threads currently known and running (== all thread objects created) */
 static std::shared_ptr<internal::tVectorWithMutex<std::weak_ptr<tThread>>>& GetThreadList()
 {
@@ -138,12 +132,54 @@ static std::shared_ptr<internal::tVectorWithMutex<std::weak_ptr<tThread>>>& GetT
   return thread_list;
 }
 
+static uint32_t GetUniqueThreadId()
+{
+  static tOrderedMutex mutex("GetUniqueThreadId()", 0x7FFFFFFE);
+  static bool overflow = false;
+  static uint32_t counter = 1;
+  tLock lock(mutex);
+  if (!overflow)
+  {
+    int result = counter;
+    counter++;
+    if (counter == 0)
+    {
+      overflow = true;
+    }
+    return result;
+  }
+
+  tLock lock2(GetThreadList()->obj_mutex);
+  // hmm... we start at id 1024 - as the former threads may be more long-lived
+  counter = std::max(1023u, counter);
+  std::vector<std::weak_ptr<tThread>>& current_threads = GetThreadList()->vec;
+  while (true)
+  {
+    counter++;
+    bool used = false;
+    for (auto it = current_threads.begin(); it != current_threads.end(); ++it)
+    {
+      std::shared_ptr<tThread> thread = it->lock();
+      if (thread && thread->GetId() == counter)
+      {
+        used = true;
+        break;
+      }
+    }
+    if (!used)
+    {
+      return counter;
+    }
+  }
+}
+
+
 } // namespace internal
 
 tThread::tThread(bool anonymous, bool legion) :
   stop_signal(false),
   lock_stack(),
-  id(internal::GetThreadCounter()++),
+  id(internal::GetUniqueThreadId()),
   name(internal::GetDefaultThreadName(id)),
   priority(cDEFAULT_PRIORITY),
   state(tState::RUNNING),
@@ -176,7 +212,7 @@ tThread::tThread(bool anonymous, bool legion) :
 tThread::tThread(const std::string& name) :
   stop_signal(false),
   lock_stack(),
-  id(internal::GetThreadCounter()++),
+  id(internal::GetUniqueThreadId()),
   name(name.length() > 0 ? name : internal::GetDefaultThreadName(id)),
   priority(cDEFAULT_PRIORITY),
   state(tState::NEW),
@@ -324,17 +360,10 @@ void tThread::Launcher()
   state = tState::RUNNING;
   if (start_signal && (!(stop_signal)))
   {
-    try
-    {
-      l.Unlock();
-      RRLIB_LOG_PRINT(DEBUG, "Thread started");
-      Run();
-      RRLIB_LOG_PRINT(DEBUG, "Thread exited normally");
-    }
-    catch (const std::exception& e)
-    {
-      RRLIB_LOG_PRINT(ERROR, "Thread exited because of exception: ", e.what());
-    }
+    l.Unlock();
+    RRLIB_LOG_PRINT(DEBUG, "Thread started");
+    Run();
+    RRLIB_LOG_PRINT(DEBUG, "Thread exited normally");
   }
 
   RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Exiting");
@@ -381,14 +410,44 @@ void tThread::SetName(const std::string& name)
   pthread_setname_np(handle, name.substr(0, 15).c_str());
 }
 
+void tThread::SetPriority(int new_priority)
+{
+  //if (new_priority < sched_get_priority_min(SCHED_OTHER) || new_priority > sched_get_priority_max(SCHED_OTHER))
+  if (new_priority < -20 || new_priority > 19)
+  {
+    //pthread_getschedparam(handle, &policy, &param);
+    RRLIB_LOG_PRINT(ERROR, "Invalid thread priority: ", new_priority, ". Ignoring.");// Valid range is ", sched_get_priority_min(SCHED_OTHER), " to ", sched_get_priority_max(SCHED_OTHER),
+    //    ". Current priority is ", param.sched_priority, ".");
+    return;
+  }
+  if (CurrentThreadId() != GetId())
+  {
+    RRLIB_LOG_PRINT(ERROR, "SetPriority can only be called from the current thread");
+    return;
+  }
+
+  //int error_code = pthread_setschedparam(handle, SCHED_OTHER, &param);
+  // works according to "man pthreads" and discussion on: http://stackoverflow.com/questions/7684404/is-nice-used-to-change-the-thread-priority-or-the-process-priority
+  pid_t thread_id = syscall(SYS_gettid);
+  int error_code = setpriority(PRIO_PROCESS, thread_id, new_priority);
+  if (error_code)
+  {
+    RRLIB_LOG_PRINT(ERROR, "Failed to change thread priority: ", strerror(error_code));
+    return;
+  }
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Set niceness to ", new_priority);
+  priority = new_priority;
+}
+
 void tThread::SetRealtime()
 {
   struct sched_param param;
   param.sched_priority = 49;
-  if (pthread_setschedparam(handle, SCHED_FIFO, &param))
+  int error_code = pthread_setschedparam(handle, SCHED_FIFO, &param);
+  if (error_code)
   {
     //printf("Failed making thread a real-time thread. Possibly current user has insufficient rights.\n");
-    RRLIB_LOG_PRINT(ERROR, "Failed making thread a real-time thread. Possibly current user has insufficient rights.");
+    RRLIB_LOG_PRINT(ERROR, "Failed making thread a real-time thread.", (error_code == EPERM ? " Caller does not have appropriate privileges." : ""));
   }
 }
 
