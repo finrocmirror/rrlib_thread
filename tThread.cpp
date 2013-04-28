@@ -358,7 +358,7 @@ void tThread::Launcher()
 
   // run thread?
   state = tState::RUNNING;
-  if (start_signal && (!(stop_signal)))
+  if (start_signal/* && (!(stop_signal))*/)
   {
     l.Unlock();
     RRLIB_LOG_PRINT(DEBUG, "Thread started");
@@ -458,7 +458,7 @@ void tThread::Sleep(const rrlib::time::tDuration& sleep_for, bool use_applicatio
   tThread& t = CurrentThread();
   if (time_mode == rrlib::time::tTimeMode::SYSTEM_TIME || (!use_application_time))
   {
-    if (sleep_for <= std::chrono::milliseconds(500))
+    if (sleep_for < std::chrono::milliseconds(400))
     {
       std::this_thread::sleep_for(sleep_for);
     }

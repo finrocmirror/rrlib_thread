@@ -31,6 +31,10 @@
  *
  * Lock for all mutex classes in rrlib_thread
  *
+ * (Wraps std::unique_lock for different mutex types.
+ *  Additionally enforces correct lock order if #define
+ *  RRLIB_THREAD_ENFORCE_LOCK_ORDER is enabled)
+ *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__thread__tLock_h__
@@ -72,9 +76,13 @@ namespace thread
 //----------------------------------------------------------------------
 // Class declaration
 //----------------------------------------------------------------------
-//! Lock
+//! Unique Lock
 /*!
  * Lock for all mutex classes in rrlib_thread
+ *
+ * (Wraps std::unique_lock for different mutex types.
+ *  Additionally enforces correct lock order if #define
+ *  RRLIB_THREAD_ENFORCE_LOCK_ORDER is enabled)
  */
 class tLock : boost::noncopyable
 {
@@ -87,48 +95,53 @@ public:
 
 #ifndef RRLIB_SINGLE_THREADED
 
-  explicit tLock(const tMutex& mutex) :
+  /*! Creates lock not related to any mutex (cannot be locked) */
+  explicit tLock() :
     simple_lock(),
     recursive_lock(),
     locked_ordered(NULL),
-    locked_simple(&mutex)
+    locked_simple(NULL)
+  {}
+
+  /*!
+   * \param mutex Mutex to lock
+   * \param immediately_lock Immediately lock mutex on construction of this lock?
+   * (If this is false, Lock() or TryLock() can be called later to acquire lock)
+   */
+  template <typename TMutex>
+  inline explicit tLock(const TMutex& mutex, bool immediately_lock = true) :
+    simple_lock(),
+    recursive_lock(),
+    locked_ordered(GetLockedOrdered(mutex)),
+    locked_simple(GetLockedSimple(mutex))
   {
-#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
-    internal::tLockStack::Push(this);
-#endif
-    simple_lock = std::unique_lock<std::mutex>(mutex.wrapped);
+    if (immediately_lock)
+    {
+      Lock(mutex);
+    }
   }
 
-  explicit tLock(const tNoMutex& mutex) :
+  /*! move constructor */
+  explicit tLock(tLock && other) :
     simple_lock(),
     recursive_lock(),
     locked_ordered(NULL),
     locked_simple(NULL)
   {
+    std::swap(simple_lock, other.simple_lock);
+    std::swap(recursive_lock, other.recursive_lock);
+    std::swap(locked_ordered, other.locked_ordered);
+    std::swap(locked_simple, other.locked_simple);
   }
 
-  explicit tLock(const tOrderedMutex& mutex) :
-    simple_lock(),
-    recursive_lock(),
-    locked_ordered(&mutex),
-    locked_simple(&mutex)
+  /*! move assignment */
+  tLock& operator=(tLock && other)
   {
-#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
-    internal::tLockStack::Push(this);
-#endif
-    simple_lock = std::unique_lock<std::mutex>(mutex.wrapped);
-  }
-
-  explicit tLock(const tRecursiveMutex& mutex) :
-    simple_lock(),
-    recursive_lock(),
-    locked_ordered(&mutex),
-    locked_simple()
-  {
-#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
-    internal::tLockStack::Push(this);
-#endif
-    recursive_lock = std::unique_lock<std::recursive_mutex>(mutex.wrapped);
+    std::swap(simple_lock, other.simple_lock);
+    std::swap(recursive_lock, other.recursive_lock);
+    std::swap(locked_ordered, other.locked_ordered);
+    std::swap(locked_simple, other.locked_simple);
+    return *this;
   }
 
   ~tLock()
@@ -150,15 +163,6 @@ public:
     return simple_lock;
   }
 
-#else
-
-  template <typename T>
-  tLock(const T& mutex) {}
-
-  ~tLock() {}
-
-#endif
-
   /*!
    * \param mutex Mutex (either tOrderedMutex or tMutex)
    *
@@ -167,6 +171,41 @@ public:
   bool IsLocked(const tMutex& mutex) const
   {
     return &mutex == locked_simple && simple_lock.owns_lock();
+  }
+
+  /*!
+   * Lock (again)
+   */
+  inline void Lock()
+  {
+    assert(((!simple_lock.owns_lock()) && (!(recursive_lock.owns_lock()))) && "Unlock before calling lock()");
+    if (locked_simple)
+    {
+      Lock(*locked_simple);
+    }
+    else if (locked_ordered)
+    {
+      Lock(static_cast<const tRecursiveMutex&>(*locked_ordered));
+    }
+  }
+
+  /*!
+   * Tries to acquire lock on mutex (does not block)
+   *
+   * \return True, if lock could be acquired
+   */
+  inline bool TryLock()
+  {
+    assert(((!simple_lock.owns_lock()) && (!(recursive_lock.owns_lock()))) && "Unlock before calling lock()");
+    if (locked_simple)
+    {
+      return TryLock(*locked_simple);
+    }
+    else if (locked_ordered)
+    {
+      return TryLock(static_cast<const tRecursiveMutex&>(*locked_ordered));
+    }
+    return true;
   }
 
   /*!
@@ -192,27 +231,20 @@ public:
     }
   }
 
-  /*!
-   * Lock (again)
-   */
-  void Lock()
-  {
-    assert(((!simple_lock.owns_lock()) && (!(recursive_lock.owns_lock()))) && "Unlock before calling lock()");
-    if (locked_simple)
-    {
-#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
-      internal::tLockStack::Push(this);
+#else
+
+  tLock() {}
+
+  template <typename T>
+  tLock(const T& mutex) {}
+
+  template <typename T1, typename T2>
+  tLock(const T& mutex, T2 parameter) {}
+
+  ~tLock() {}
+
 #endif
-      simple_lock.lock();
-    }
-    else if (locked_ordered)
-    {
-#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
-      internal::tLockStack::Push(this);
-#endif
-      recursive_lock.lock();
-    }
-  }
+
 
 //----------------------------------------------------------------------
 // Private fields and methods
@@ -229,7 +261,90 @@ private:
   const tOrderedMutexBaseClass* locked_ordered;
   const tMutex* locked_simple;
 
+
+  // Internal helper methods to handle different variants of mutexes uniformly in constructors
+
+  inline const tOrderedMutexBaseClass* GetLockedOrdered(const tMutex& mutex)
+  {
+    return NULL;
+  }
+  inline const tOrderedMutexBaseClass* GetLockedOrdered(const tNoMutex& mutex)
+  {
+    return NULL;
+  }
+  inline const tOrderedMutexBaseClass* GetLockedOrdered(const tOrderedMutex& mutex)
+  {
+    return &mutex;
+  }
+  inline const tOrderedMutexBaseClass* GetLockedOrdered(const tRecursiveMutex& mutex)
+  {
+    return &mutex;
+  }
+  inline const tMutex* GetLockedSimple(const tMutex& mutex)
+  {
+    return &mutex;
+  }
+  inline const tMutex* GetLockedSimple(const tNoMutex& mutex)
+  {
+    return NULL;
+  }
+  inline const tMutex* GetLockedSimple(const tOrderedMutex& mutex)
+  {
+    return &mutex;
+  }
+  inline const tMutex* GetLockedSimple(const tRecursiveMutex& mutex)
+  {
+    return NULL;
+  }
+
+  inline void Lock(const tNoMutex& mutex) {}
+  inline void Lock(const tMutex& mutex)
+  {
+#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
+    internal::tLockStack::Push(this);
 #endif
+    simple_lock = std::unique_lock<std::mutex>(mutex.wrapped);
+  }
+  inline void Lock(const tRecursiveMutex& mutex)
+  {
+#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
+    internal::tLockStack::Push(this);
+#endif
+    recursive_lock = std::unique_lock<std::recursive_mutex>(mutex.wrapped);
+  }
+
+  inline bool TryLock(const tNoMutex& mutex)
+  {
+    return true;
+  }
+  inline bool TryLock(const tMutex& mutex)
+  {
+    simple_lock = std::unique_lock<std::mutex>(mutex.wrapped, std::defer_lock_t());
+    bool locked = simple_lock.try_lock();
+    if (locked)
+    {
+#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
+      internal::tLockStack::Push(this);
+#endif
+    }
+    return locked;
+  }
+  inline bool TryLock(const tRecursiveMutex& mutex)
+  {
+    recursive_lock = std::unique_lock<std::recursive_mutex>(mutex.wrapped, std::defer_lock_t());
+    bool locked = recursive_lock.try_lock();
+    if (locked)
+    {
+#ifdef RRLIB_THREAD_ENFORCE_LOCK_ORDER
+      internal::tLockStack::Push(this);
+#endif
+    }
+    return locked;
+  }
+
+#endif
+
+
 };
 
 //----------------------------------------------------------------------
