@@ -85,7 +85,7 @@ static const size_t cMAX_NESTED_LOCKS = 100;
  * (Having this information entirely thread-local is more efficient and simpler than maintaining linked-lists across threads,
  * since variables would need to be volatile etc.)
  */
-struct tLockStackData : boost::noncopyable
+struct tLockStackData : private util::tNoncopyable
 {
   /*! Stack entries */
   std::vector<const tLock*> entries;
@@ -180,7 +180,6 @@ void tLockStack::Push(const tLock* lock)
     }
     else if (lock->locked_ordered && lock->locked_simple)
     {
-      bool found = false;
       for (auto it = s->entries.begin(); it < s->entries.end(); it++)
       {
         if (lock->locked_ordered == (*it)->locked_ordered)

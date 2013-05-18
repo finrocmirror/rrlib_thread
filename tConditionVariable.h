@@ -79,7 +79,7 @@ namespace thread
  * Note, that wait-timeout is always system time using this class.
  * If you need "application time" (that is possibly adjusted during wait due to stretching factor change; see rrlib/time/time.h), use tThread::Wait().
  */
-class tConditionVariable : boost::noncopyable
+class tConditionVariable : private util::tNoncopyable
 {
 
 //----------------------------------------------------------------------

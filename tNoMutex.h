@@ -39,7 +39,7 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include <boost/utility.hpp>
+#include "rrlib/util/tNoncopyable.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -65,7 +65,7 @@ class tLock;
 /*!
  * Noop mutex. Can be useful as template parameter for certain classes to disable any internal locking.
  */
-class tNoMutex : boost::noncopyable
+class tNoMutex : private util::tNoncopyable
 {
 //----------------------------------------------------------------------
 // Public methods and typedefs

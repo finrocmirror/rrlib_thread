@@ -182,7 +182,7 @@ static tTimeStretchingListenerImpl time_stretching_listener;
 /*!
  * This object increments value while it exists
  */
-struct tTemporalIncrement : boost::noncopyable
+struct tTemporalIncrement : private util::tNoncopyable
 {
   int& value;
   tTemporalIncrement(int& value) : value(value)

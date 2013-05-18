@@ -84,7 +84,7 @@ namespace thread
  *  Additionally enforces correct lock order if #define
  *  RRLIB_THREAD_ENFORCE_LOCK_ORDER is enabled)
  */
-class tLock : boost::noncopyable
+class tLock : private util::tNoncopyable
 {
   friend class internal::tLockStack;
 

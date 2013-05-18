@@ -40,7 +40,7 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include <mutex>
-#include <boost/utility.hpp>
+#include "rrlib/util/tNoncopyable.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -66,7 +66,7 @@ class tLock;
 /*!
  * Simple Mutex. No Mutex may be acquired after a simple mutex.
  */
-class tMutex : boost::noncopyable
+class tMutex : private util::tNoncopyable
 {
   friend class tLock;
 
