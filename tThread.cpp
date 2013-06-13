@@ -287,7 +287,7 @@ void tThread::AddToThreadList()
 typedef rrlib::design_patterns::tSingletonHolder<boost::thread_specific_ptr<tThread>, rrlib::design_patterns::singleton::Longevity, internal::CreateCurThreadLocal> tCurThreadLocal;
 static inline unsigned int GetLongevity(boost::thread_specific_ptr<tThread>*)
 {
-  return 0xFCCCCCCC; // should exit before allocation register
+  return 0xFFFFFFFC; // should exist longer than anything using rrlib locks
 }
 
 boost::thread_specific_ptr<tThread>& tThread::GetCurThreadLocal()
