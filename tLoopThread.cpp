@@ -158,7 +158,7 @@ void tLoopThread::SetUseApplicationTime(bool use_application_time)
   bool last_value = this->use_application_time.exchange(use_application_time);
   if (last_value != use_application_time)
   {
-    last_cycle_start != rrlib::time::cNO_TIME;
+    last_cycle_start = rrlib::time::cNO_TIME;
   }
 }
 
