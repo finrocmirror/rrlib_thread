@@ -104,7 +104,7 @@ void tLoopThread::MainLoop()
       bool local_use_application_time = use_application_time.load(std::memory_order_relaxed);
 
       // wait
-      rrlib::time::tTimestamp now = rrlib::time::Now();
+      rrlib::time::tTimestamp now = local_use_application_time ? rrlib::time::Now() : rrlib::time::tBaseClock::now();
       rrlib::time::tDuration last_cycle_time_tmp = now - last_cycle_start;
       last_cycle_time.Store(last_cycle_time_tmp);
       rrlib::time::tDuration wait_for_x = cycle_time - last_cycle_time_tmp;
@@ -134,12 +134,12 @@ void tLoopThread::MainLoop()
       last_cycle_start += cycle_time;
       if (wait_for_x < rrlib::time::tDuration::zero())
       {
-        last_cycle_start = rrlib::time::Now();
+        last_cycle_start = local_use_application_time ? rrlib::time::Now() : rrlib::time::tBaseClock::now();
       }
     }
     else
     {
-      last_cycle_start = rrlib::time::Now();
+      last_cycle_start = use_application_time.load(std::memory_order_relaxed) ? rrlib::time::Now() : rrlib::time::tBaseClock::now();
     }
 
     MainLoopCallback();
