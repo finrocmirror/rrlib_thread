@@ -277,6 +277,7 @@ void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, 
       {
         std::lock_guard<std::mutex> l(rrlib::time::internal::tTimeMutex::Instance()); // this won't dead-lock, because this condition variable is not in listener list yet
         GetConditionVariableList()->push_back(this);
+        registered_in_list = true;
       }
       catch (const std::logic_error&) // tTimeMutex no longer exists
       {
