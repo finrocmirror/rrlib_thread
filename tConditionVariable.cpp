@@ -85,7 +85,7 @@ class tTimeStretchingListenerImpl : public rrlib::time::tTimeStretchingListener
 {
   rrlib::time::tTimeMode old_mode;
 
-  virtual void TimeChanged(const rrlib::time::tTimestamp& current_time)
+  virtual void TimeChanged(const rrlib::time::tTimestamp& current_time) override
   {
     if (!GetConditionVariableList())
     {
@@ -126,7 +126,7 @@ class tTimeStretchingListenerImpl : public rrlib::time::tTimeStretchingListener
     }
   }
 
-  virtual void TimeModeChanged(rrlib::time::tTimeMode new_mode)
+  virtual void TimeModeChanged(rrlib::time::tTimeMode new_mode) override
   {
     if (!GetConditionVariableList())
     {
@@ -149,7 +149,7 @@ class tTimeStretchingListenerImpl : public rrlib::time::tTimeStretchingListener
     old_mode = new_mode;
   }
 
-  virtual void TimeStretchingFactorChanged(bool app_time_faster)
+  virtual void TimeStretchingFactorChanged(bool app_time_faster) override
   {
     if (!GetConditionVariableList())
     {

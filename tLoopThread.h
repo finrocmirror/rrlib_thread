@@ -148,7 +148,7 @@ public:
     pause_signal = true;
   }
 
-  virtual void Run();
+  virtual void Run() override;
 
   /*!
    * \param cycle_time New Cycle time with which callback function is called
