@@ -134,7 +134,7 @@ private:
   /*! Mutex that needs to be acquired before doing anything with this monitor */
   tMutex& mutex;
 
-  /*! Wrapped boost condition variable */
+  /*! Wrapped condition variable */
   std::condition_variable wrapped;
 
   /*! Has condition variable been registered for application time listening? */

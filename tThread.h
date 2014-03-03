@@ -40,7 +40,6 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include <boost/thread/tss.hpp>
 #include <thread>
 #include <atomic>
 #include "rrlib/logging/messages.h"
@@ -125,16 +124,11 @@ public:
    */
   inline static tThread& CurrentThread()
   {
-    tThread* result = cur_thread;
+    tThread* result = current_thread.pointer;
     if (result == NULL)   // unknown thread
     {
-      result = GetCurThreadLocal().get();
-      if (result == NULL)
-      {
-        result = new tThread(true, false); // will be deleted by thread local
-        GetCurThreadLocal().reset(result); // safe because it's the same thread
-      }
-      cur_thread = result;
+      result = new tThread(true, false); // will be deleted by thread local
+      current_thread.pointer = result;
     }
     return *result;
   }
@@ -411,8 +405,17 @@ private:
   /*! Objects (shared pointers) that thread has locked (won't be deleted as long as thread exists) */
   std::vector<std::shared_ptr<void>> locked_objects;
 
+  /*! Holds thread pointer and has destructor for thread cleanup */
+  class tPointer
+  {
+  public:
+    tThread* pointer;
+    tPointer() : pointer(NULL) {}
+    ~tPointer();
+  };
+
   /*! Reference to current thread */
-  static __thread tThread* cur_thread;
+  static thread_local tPointer current_thread;
 
   /*!
    * Determines order in which threads are stopped in StopThreads().
@@ -444,9 +447,6 @@ private:
    * Add thread to thread list
    */
   void AddToThreadList();
-
-  /*! Stores thread local information on current thread */
-  static boost::thread_specific_ptr<tThread>& GetCurThreadLocal();
 
   /*!
    * Newly created threads enter this method

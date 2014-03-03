@@ -36,6 +36,8 @@
 #include <cstring>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <unistd.h>
+
 #include "rrlib/design_patterns/singleton.h"
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -71,23 +73,10 @@ namespace thread
 // Implementation
 //----------------------------------------------------------------------
 
-__thread tThread* tThread::cur_thread = NULL;
-
+thread_local tThread::tPointer tThread::current_thread;
 
 namespace internal
 {
-class tThreadCleanup
-{
-public:
-  static void Cleanup(tThread* t)
-  {
-    tLock l(*t);
-    t->state = tThread::tState::TERMINATED;
-    //t->curThread.reset();
-    l.Unlock();
-    t->self.reset(); // possibly delete thread - important that it's last statement
-  }
-};
 
 /*!
  * Class for thread (self) deletion
@@ -111,19 +100,6 @@ static std::string GetDefaultThreadName(int64_t id)
   oss << "Thread-" << id;
   return oss.str();
 }
-
-template <typename T>
-struct CreateCurThreadLocal
-{
-  static T* Create()
-  {
-    return new T(tThreadCleanup::Cleanup);
-  }
-  static void Destroy(T* object)
-  {
-    delete object;
-  }
-};
 
 /*! List of threads currently known and running (== all thread objects created) */
 static std::shared_ptr<internal::tVectorWithMutex<std::weak_ptr<tThread>>>& GetThreadList()
@@ -284,17 +260,6 @@ void tThread::AddToThreadList()
   RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Creating thread ", this);
 }
 
-typedef rrlib::design_patterns::tSingletonHolder<boost::thread_specific_ptr<tThread>, rrlib::design_patterns::singleton::Longevity, internal::CreateCurThreadLocal> tCurThreadLocal;
-static inline unsigned int GetLongevity(boost::thread_specific_ptr<tThread>*)
-{
-  return 0xFFFFFFFC; // should exist longer than anything using rrlib locks
-}
-
-boost::thread_specific_ptr<tThread>& tThread::GetCurThreadLocal()
-{
-  return tCurThreadLocal::Instance();
-}
-
 std::string tThread::GetLogDescription() const
 {
   std::ostringstream oss;
@@ -342,13 +307,10 @@ void tThread::Launch(tThread* thread_ptr)
 void tThread::Launcher()
 {
   //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "Entering";
-  cur_thread = this;
+  current_thread.pointer = this;
   tLock l(*this);
   state = tState::PREPARE_RUNNING;
   //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "Locked";
-  //curThread = threadPtr;
-  GetCurThreadLocal().reset(this);
-  //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "ThreadLocal set";
 
   // wait for start signal
   while ((!(start_signal)) && (!(stop_signal)))
@@ -599,6 +561,15 @@ bool tThread::StopThreads(bool query_only)
 void tThread::Yield()
 {
   std::this_thread::yield();
+}
+
+tThread::tPointer::~tPointer()
+{
+  tLock l(*pointer);
+  pointer->state = tThread::tState::TERMINATED;
+  //t->curThread.reset();
+  l.Unlock();
+  pointer->self.reset(); // possibly delete thread - important that it's last statement
 }
 
 //----------------------------------------------------------------------
