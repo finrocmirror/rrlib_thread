@@ -108,11 +108,19 @@ void tLoopThread::MainLoop()
       rrlib::time::tDuration last_cycle_time_tmp = now - last_cycle_start;
       if (last_cycle_time_tmp.count() < 0)
       {
-        RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: Last cycle started ", rrlib::time::ToString(-last_cycle_time_tmp), " \"after\" this cycle.");
+        if (-last_cycle_time_tmp <= cycle_time)
+        {
+          RRLIB_LOG_PRINT(WARNING, "Early thread wakeup detected");
+        }
+        else
+        {
+          RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: According to clock, current cycle started ", rrlib::time::ToString(-last_cycle_time_tmp), " before it should have. This would have been before the last cycle.");
+        }
+
         last_cycle_start = now;
         if (last_wait > rrlib::time::tDuration::zero())
         {
-          RRLIB_LOG_PRINT(WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle, instead.");
+          RRLIB_LOG_PRINT(WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle.");
           Sleep(last_wait, local_use_application_time);
         }
         else
