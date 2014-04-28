@@ -106,16 +106,10 @@ void tLoopThread::MainLoop()
       // wait
       rrlib::time::tTimestamp now = local_use_application_time ? rrlib::time::Now() : rrlib::time::tBaseClock::now();
       rrlib::time::tDuration last_cycle_time_tmp = now - last_cycle_start;
-      last_cycle_time.Store(last_cycle_time_tmp);
-      rrlib::time::tDuration wait_for_x = cycle_time - last_cycle_time_tmp;
-      if (wait_for_x < rrlib::time::tDuration::zero() && warn_on_cycle_time_exceed && cDISPLAYWARNINGS)
+      if (last_cycle_time_tmp.count() < 0)
       {
-        //System.err.println("warning: Couldn't keep up cycle time (" + (-waitForX) + " ms too long)");
-        RRLIB_LOG_PRINT(WARNING, "Couldn't keep up cycle time (", rrlib::time::ToString(-wait_for_x), " too long)");
-      }
-      else if (wait_for_x > cycle_time)
-      {
-        RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: Last cycle started \"after\" this cycle. This would mean we'd have to wait for ", rrlib::time::ToString(wait_for_x), " now.");
+        RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: Last cycle started ", -last_cycle_time_tmp.count(), " \"after\" this cycle.");
+        last_cycle_start = now;
         if (last_wait > rrlib::time::tDuration::zero())
         {
           RRLIB_LOG_PRINT(WARNING, "Waiting for ", rrlib::time::ToString(last_wait), ", as in last cycle, instead.");
@@ -126,15 +120,27 @@ void tLoopThread::MainLoop()
           RRLIB_LOG_PRINT(WARNING, "Not waiting at all. As it appears, this thread has never waited yet.");
         }
       }
-      else if (wait_for_x > rrlib::time::tDuration::zero())
+      else
       {
-        last_wait = wait_for_x;
-        Sleep(wait_for_x, local_use_application_time, last_cycle_start + cycle_time);
-      }
-      last_cycle_start += cycle_time;
-      if (wait_for_x < rrlib::time::tDuration::zero())
-      {
-        last_cycle_start = local_use_application_time ? rrlib::time::Now() : rrlib::time::tBaseClock::now();
+        last_cycle_time.Store(last_cycle_time_tmp);
+        rrlib::time::tDuration wait_for_x = cycle_time - last_cycle_time_tmp;
+        if (wait_for_x < rrlib::time::tDuration::zero())
+        {
+          if (warn_on_cycle_time_exceed && cDISPLAYWARNINGS)
+          {
+            RRLIB_LOG_PRINT(WARNING, "Couldn't keep up cycle time (", rrlib::time::ToString(-wait_for_x), " too long)");
+          }
+          last_cycle_start = now;
+        }
+        else
+        {
+          last_wait = wait_for_x;
+          if (wait_for_x > rrlib::time::tDuration::zero())
+          {
+            Sleep(wait_for_x, local_use_application_time, last_cycle_start + cycle_time);
+          }
+          last_cycle_start += cycle_time;
+        }
       }
     }
     else
