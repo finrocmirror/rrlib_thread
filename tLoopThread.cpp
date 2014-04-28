@@ -108,7 +108,7 @@ void tLoopThread::MainLoop()
       rrlib::time::tDuration last_cycle_time_tmp = now - last_cycle_start;
       if (last_cycle_time_tmp.count() < 0)
       {
-        RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: Last cycle started ", -last_cycle_time_tmp.count(), " \"after\" this cycle.");
+        RRLIB_LOG_PRINT(WARNING, "Clock inconsistency detected: Last cycle started ", rrlib::time::ToString(-last_cycle_time_tmp), " \"after\" this cycle.");
         last_cycle_start = now;
         if (last_wait > rrlib::time::tDuration::zero())
         {
