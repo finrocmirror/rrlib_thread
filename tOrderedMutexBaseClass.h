@@ -84,7 +84,11 @@ public:
    */
   const char* GetDescription() const
   {
+#ifndef RRLIB_SINGLE_THREADED
     return description;
+#else
+    return "";
+#endif
   }
 
   /*!

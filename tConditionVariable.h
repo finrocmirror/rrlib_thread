@@ -41,7 +41,10 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include "rrlib/time/time.h"
+
+#ifndef RRLIB_SINGLE_THREADED
 #include <condition_variable>
+#endif
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -129,6 +132,7 @@ public:
 //----------------------------------------------------------------------
 private:
 
+#ifndef RRLIB_SINGLE_THREADED
   friend class tTimeStretchingListenerImpl;
 
   /*! Mutex that needs to be acquired before doing anything with this monitor */
@@ -159,6 +163,7 @@ private:
    * \return Has condition variable been correctly acquired to perform operation condition variable?
    */
   bool ConditionVariableLockCorrectlyAcquired(const tLock& l) const;
+#endif
 };
 
 //----------------------------------------------------------------------

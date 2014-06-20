@@ -69,6 +69,7 @@ namespace thread
 // Implementation
 //----------------------------------------------------------------------
 
+#ifndef RRLIB_SINGLE_THREADED
 typedef rrlib::design_patterns::tSingletonHolder<std::vector<tConditionVariable*>> tConditionVariableListSingleton;
 static std::vector<tConditionVariable*>* GetConditionVariableList()
 {
@@ -351,6 +352,27 @@ void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, 
     waiting_until_application_time = rrlib::time::cNO_TIME;
   }
 }
+#else // RRLIB_SINGLE_THREADED
+
+tConditionVariable::tConditionVariable(tMutex& mutex)
+{}
+
+tConditionVariable::~tConditionVariable()
+{}
+
+void tConditionVariable::Notify(tLock& l)
+{}
+
+void tConditionVariable::NotifyAll(tLock& l)
+{}
+
+void tConditionVariable::Wait(tLock& l)
+{}
+
+void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
+{}
+
+#endif // RRLIB_SINGLE_THREADED
 
 //----------------------------------------------------------------------
 // End of namespace declaration

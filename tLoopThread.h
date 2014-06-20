@@ -91,7 +91,9 @@ public:
    */
   inline rrlib::time::tTimestamp GetCurrentCycleStartTime() const
   {
+#ifndef RRLIB_SINGLE_THREADED
     assert(&CurrentThread() == this && "Please only call from this thread");
+#endif
     return last_cycle_start;
   }
 

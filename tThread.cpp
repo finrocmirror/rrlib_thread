@@ -34,9 +34,12 @@
 //----------------------------------------------------------------------
 #include <sstream>
 #include <cstring>
+
+#ifndef RRLIB_SINGLE_THREADED
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#endif
 
 #include "rrlib/design_patterns/singleton.h"
 //----------------------------------------------------------------------
@@ -68,12 +71,17 @@ namespace thread
 //----------------------------------------------------------------------
 // Const values
 //----------------------------------------------------------------------
+#ifdef _PTHREAD_H
+#define RRLIB_THREAD_USING_PTHREADS
+#endif
 
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
 
+#ifndef RRLIB_SINGLE_THREADED
 thread_local tThread::tPointer tThread::current_thread;
+#endif
 
 namespace internal
 {
@@ -127,7 +135,7 @@ static uint32_t GetUniqueThreadId()
 
   tLock lock2(GetThreadList()->obj_mutex);
   // hmm... we start at id 1024 - as the former threads may be more long-lived
-  counter = std::max(1023u, counter);
+  counter = std::max<uint32_t>(1023u, counter);
   std::vector<std::weak_ptr<tThread>>& current_threads = GetThreadList()->vec;
   while (true)
   {
@@ -167,12 +175,15 @@ tThread::tThread(bool anonymous, bool legion) :
   locked_objects(),
   longevity(0),
   unknown_thread(true),
+#ifndef RRLIB_SINGLE_THREADED
   wrapped_thread(),
   handle(pthread_self()),
+#endif
   joining_threads(0)
 {
   AddToThreadList();
 
+#ifdef RRLIB_THREAD_USING_PTHREADS
   // see if we can obtain a thread name
   char name_buffer[1024];
   if (!pthread_getname_np(handle, name_buffer, 1023))
@@ -183,6 +194,7 @@ tThread::tThread(bool anonymous, bool legion) :
       name = name_buffer;
     }
   }
+#endif
 }
 
 tThread::tThread(const std::string& name) :
@@ -200,8 +212,10 @@ tThread::tThread(const std::string& name) :
   locked_objects(),
   longevity(0),
   unknown_thread(false),
+#ifndef RRLIB_SINGLE_THREADED
   wrapped_thread(&Launch, this),
   handle(wrapped_thread.native_handle()),
+#endif
   joining_threads(0)
 {
   AddToThreadList();
@@ -235,6 +249,7 @@ tThread::~tThread()
   lock.Unlock();
   if (!unknown_thread)
   {
+#ifndef RRLIB_SINGLE_THREADED
     if (&tThread::CurrentThread() != this)
     {
       Join(); // we shouldn't delete anything while thread is still running
@@ -243,6 +258,7 @@ tThread::~tThread()
     {
       wrapped_thread.detach();
     }
+#endif
   }
 
   for (auto rit = locked_objects.rbegin(); rit < locked_objects.rend(); ++rit)
@@ -274,6 +290,8 @@ void tThread::Join()
     RRLIB_LOG_PRINT(WARNING, "Operation not supported for threads of unknown origin.");
     return;
   }
+
+#ifndef RRLIB_SINGLE_THREADED
   if (!wrapped_thread.joinable())
   {
     return;
@@ -297,6 +315,7 @@ void tThread::Join()
     wrapped_thread.join();
   }
   RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Joined Thread");
+#endif
 }
 
 void tThread::Launch(tThread* thread_ptr)
@@ -306,6 +325,7 @@ void tThread::Launch(tThread* thread_ptr)
 
 void tThread::Launcher()
 {
+#ifndef RRLIB_SINGLE_THREADED
   //unsafe _FINROC_LOG_MESSAGE(DEBUG_VERBOSE_2, logDomain) << "Entering";
   current_thread.pointer = this;
   tLock l(*this);
@@ -343,6 +363,7 @@ void tThread::Launcher()
   {
     RRLIB_LOG_PRINT(ERROR, "Thread encountered exception during cleanup: ", e.what());
   }
+#endif
 }
 
 void tThread::LockObject(std::shared_ptr<void> obj)
@@ -369,11 +390,14 @@ void tThread::PreJoin()
 void tThread::SetName(const std::string& name)
 {
   this->name = name;
+#ifdef RRLIB_THREAD_USING_PTHREADS
   pthread_setname_np(handle, name.substr(0, 15).c_str());
+#endif
 }
 
 void tThread::SetPriority(int new_priority)
 {
+#ifdef RRLIB_THREAD_USING_PTHREADS
   //if (new_priority < sched_get_priority_min(SCHED_OTHER) || new_priority > sched_get_priority_max(SCHED_OTHER))
   if (new_priority < -20 || new_priority > 19)
   {
@@ -399,10 +423,12 @@ void tThread::SetPriority(int new_priority)
   }
   RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Set niceness to ", new_priority);
   priority = new_priority;
+#endif
 }
 
 void tThread::SetRealtime()
 {
+#ifdef RRLIB_THREAD_USING_PTHREADS
   struct sched_param param;
   param.sched_priority = 49;
   int error_code = pthread_setschedparam(handle, SCHED_FIFO, &param);
@@ -411,11 +437,13 @@ void tThread::SetRealtime()
     //printf("Failed making thread a real-time thread. Possibly current user has insufficient rights.\n");
     RRLIB_LOG_PRINT(ERROR, "Failed making thread a real-time thread.", (error_code == EPERM ? " Caller does not have appropriate privileges." : ""));
   }
+#endif
 }
 
 
 void tThread::Sleep(const rrlib::time::tDuration& sleep_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
 {
+#ifndef RRLIB_SINGLE_THREADED
   rrlib::time::tTimeMode time_mode = rrlib::time::GetTimeMode();
   tThread& t = CurrentThread();
   if (time_mode == rrlib::time::tTimeMode::SYSTEM_TIME || (!use_application_time))
@@ -450,6 +478,9 @@ void tThread::Sleep(const rrlib::time::tDuration& sleep_for, bool use_applicatio
       std::this_thread::sleep_for(system_duration);
     }
   }
+#else
+  std::this_thread::sleep_for(sleep_for);
+#endif
 }
 
 void tThread::Start()
@@ -479,6 +510,7 @@ void tThread::StopThread()
 
 bool tThread::StopThreads(bool query_only)
 {
+#ifndef RRLIB_SINGLE_THREADED
   volatile static bool stopping_threadz = false;
   if (stopping_threadz || query_only)   // We don't do this twice
   {
@@ -554,6 +586,7 @@ bool tThread::StopThreads(bool query_only)
       }
     }
   }
+#endif
 
   return true;
 }

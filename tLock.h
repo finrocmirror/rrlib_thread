@@ -239,9 +239,20 @@ public:
   tLock(const T& mutex) {}
 
   template <typename T1, typename T2>
-  tLock(const T& mutex, T2 parameter) {}
+  tLock(const T1& mutex, T2 parameter) {}
 
   ~tLock() {}
+
+  inline void Lock()
+  {}
+
+  inline bool TryLock()
+  {
+    return true;
+  }
+
+  void Unlock()
+  {}
 
 #endif
 

@@ -93,8 +93,13 @@ class tThread : public tMutex
 //----------------------------------------------------------------------
 public:
 
-  typedef std::thread tWrappedThread;
   typedef uint32_t tThreadId;
+
+#ifndef RRLIB_SINGLE_THREADED
+  typedef std::thread::native_handle_type tNativeHandle;
+#else
+  typedef tThreadId tNativeHandle;
+#endif
 
   /*!
    * Boundaries and default value for priorities
@@ -105,6 +110,7 @@ public:
 
   virtual ~tThread();
 
+#ifndef RRLIB_SINGLE_THREADED
   /*!
    * (convenience function)
    *
@@ -132,6 +138,7 @@ public:
     }
     return *result;
   }
+#endif
 
   bool GetDeleteOnCompletion() const
   {
@@ -183,9 +190,13 @@ public:
   /*!
    * \return Native thread handle
    */
-  inline std::thread::native_handle_type GetNativeHandle() const
+  inline tNativeHandle GetNativeHandle() const
   {
+#ifndef RRLIB_SINGLE_THREADED
     return handle;
+#else
+    return GetId();
+#endif
   }
 
   /*!
@@ -414,8 +425,10 @@ private:
     ~tPointer();
   };
 
+#ifndef RRLIB_SINGLE_THREADED
   /*! Reference to current thread */
   static thread_local tPointer current_thread;
+#endif
 
   /*!
    * Determines order in which threads are stopped in StopThreads().
@@ -427,11 +440,13 @@ private:
   /*! True, if this is a thread that was not created via this class */
   const bool unknown_thread;
 
+#ifndef RRLIB_SINGLE_THREADED
   /*! wrapped thread */
-  tWrappedThread wrapped_thread;
+  std::thread wrapped_thread;
 
-  /*! pthread/whatever handle */
-  std::thread::native_handle_type handle;
+  /*! native thread handle */
+  tNativeHandle handle;
+#endif
 
   /*! Number of threads that are joining */
   std::atomic<int> joining_threads;
