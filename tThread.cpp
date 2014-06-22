@@ -512,12 +512,12 @@ void tThread::StopThread()
 
 bool tThread::StopThreads(bool query_only)
 {
-#ifndef RRLIB_SINGLE_THREADED
   volatile static bool stopping_threadz = false;
   if (stopping_threadz || query_only)   // We don't do this twice
   {
     return stopping_threadz;
   }
+#ifndef RRLIB_SINGLE_THREADED
   stopping_threadz = true;
   const char*(*GetLogDescription)() = GetLogDescriptionStatic;
   RRLIB_LOG_PRINT(USER, "Stopping all threads");
