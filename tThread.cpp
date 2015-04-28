@@ -37,7 +37,9 @@
 
 #ifndef RRLIB_SINGLE_THREADED
 #include <sys/resource.h>
+#ifndef __CYGWIN__
 #include <sys/syscall.h>
+#endif
 #include <unistd.h>
 #endif
 
@@ -72,8 +74,10 @@ namespace thread
 // Const values
 //----------------------------------------------------------------------
 #ifndef RRLIB_SINGLE_THREADED
+#ifndef __CYGWIN__
 #ifdef _PTHREAD_H
 #define RRLIB_THREAD_USING_PTHREADS
+#endif
 #endif
 #endif
 
