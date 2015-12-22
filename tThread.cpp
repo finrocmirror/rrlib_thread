@@ -516,15 +516,15 @@ void tThread::StopThread()
 
 bool tThread::StopThreads(bool query_only)
 {
-  volatile static bool stopping_threadz = false;
-  if (stopping_threadz || query_only)   // We don't do this twice
+  volatile static bool stopping_threads = false;
+  if (stopping_threads || query_only)   // We don't do this twice
   {
-    return stopping_threadz;
+    return stopping_threads;
   }
 #ifndef RRLIB_SINGLE_THREADED
-  stopping_threadz = true;
+  stopping_threads = true;
   const char*(*GetLogDescription)() = GetLogDescriptionStatic;
-  RRLIB_LOG_PRINT(USER, "Stopping all threads");
+  RRLIB_LOG_PRINT(DEBUG, "Stopping all threads");
 
   tLock lock(internal::GetThreadList()->obj_mutex);
   std::vector<std::weak_ptr<tThread>> current_threads_unordered;
