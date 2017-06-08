@@ -230,7 +230,7 @@ tThread::tThread(const std::string& name) :
 
 tThread::~tThread()
 {
-  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Deleting thread ", this);
+  //RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Deleting thread ", this);
 
   // remove from thread list
   tLock lock(thread_list_ref->obj_mutex);
