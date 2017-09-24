@@ -70,6 +70,15 @@ namespace thread
 //----------------------------------------------------------------------
 
 #ifndef RRLIB_SINGLE_THREADED
+
+namespace
+{
+
+inline tConditionVariableStatus ToConditionVariableStatus(std::cv_status status)
+{
+  return status == std::cv_status::timeout ? tConditionVariableStatus::TIMEOUT : tConditionVariableStatus::NO_TIMEOUT;
+}
+
 typedef rrlib::design_patterns::tSingletonHolder<std::vector<tConditionVariable*>> tConditionVariableListSingleton;
 static std::vector<tConditionVariable*>* GetConditionVariableList()
 {
@@ -81,6 +90,25 @@ static std::vector<tConditionVariable*>* GetConditionVariableList()
   {}
   return NULL;
 }
+
+/*!
+ * This object increments value while it exists
+ */
+struct tTemporalIncrement : private util::tNoncopyable
+{
+  int& value;
+  tTemporalIncrement(int& value) : value(value)
+  {
+    value++;
+  }
+
+  ~tTemporalIncrement()
+  {
+    value--;
+  }
+};
+
+} // namespace
 
 class tTimeStretchingListenerImpl : public rrlib::time::tTimeStretchingListener
 {
@@ -180,22 +208,6 @@ public:
 
 static tTimeStretchingListenerImpl time_stretching_listener;
 
-/*!
- * This object increments value while it exists
- */
-struct tTemporalIncrement : private util::tNoncopyable
-{
-  int& value;
-  tTemporalIncrement(int& value) : value(value)
-  {
-    value++;
-  }
-
-  ~tTemporalIncrement()
-  {
-    value--;
-  }
-};
 
 tConditionVariable::tConditionVariable(tMutex& mutex) :
   mutex(mutex),
@@ -260,14 +272,14 @@ void tConditionVariable::Wait(tLock& l)
   wrapped.wait(l.GetSimpleLock());
 }
 
-void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
+tConditionVariableStatus tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
 {
   assert(ConditionVariableLockCorrectlyAcquired(l));
   tTemporalIncrement count_waiting_thread(waiting_on_monitor);
 
   if (!use_application_time)
   {
-    wrapped.wait_for(l.GetSimpleLock(), wait_for);
+    return ToConditionVariableStatus(wrapped.wait_for(l.GetSimpleLock(), wait_for));
   }
   else
   {
@@ -283,7 +295,7 @@ void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, 
       catch (const std::logic_error&) // tTimeMutex no longer exists
       {
         RRLIB_LOG_PRINT(DEBUG_WARNING, "Won't wait after rrlibs have been (partly) destructed.");
-        return;
+        return tConditionVariableStatus::TIMEOUT;
       }
     }
 
@@ -351,6 +363,7 @@ void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, 
 
     waiting_until_application_time = rrlib::time::cNO_TIME;
   }
+  return notified ? tConditionVariableStatus::TIMEOUT : tConditionVariableStatus::NO_TIMEOUT;
 }
 #else // RRLIB_SINGLE_THREADED
 
@@ -369,8 +382,10 @@ void tConditionVariable::NotifyAll(tLock& l)
 void tConditionVariable::Wait(tLock& l)
 {}
 
-void tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
-{}
+tConditionVariableStatus tConditionVariable::Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until)
+{
+  return tConditionVariableStatus::TIMEOUT;  // TODO support pending tasks (to do something during wait) in single-threaded mode
+}
 
 #endif // RRLIB_SINGLE_THREADED
 

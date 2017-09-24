@@ -63,6 +63,13 @@ namespace thread
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 
+/*! equivalent to std::cv_status that may be used without <condition_variable> header */
+enum tConditionVariableStatus
+{
+  NO_TIMEOUT,
+  TIMEOUT
+};
+
 //----------------------------------------------------------------------
 // Class declaration
 //----------------------------------------------------------------------
@@ -124,8 +131,9 @@ public:
    * \param wait_for Duration to wait
    * \param use_application_time Use application time?
    * \param wait_until Time point until to wait (optional). If specified, this function won't need call clock's now() in case application time is used.
+   * \return Whether wait operation timed out or a notification occured
    */
-  void Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until = rrlib::time::cNO_TIME);
+  tConditionVariableStatus Wait(tLock& l, const rrlib::time::tDuration& wait_for, bool use_application_time, rrlib::time::tTimestamp wait_until = rrlib::time::cNO_TIME);
 
 //----------------------------------------------------------------------
 // Private fields and methods
